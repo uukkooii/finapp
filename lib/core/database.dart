@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'finapp.db');
-    return await openDatabase(path, version: 4, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return await openDatabase(path, version: 5, onCreate: _onCreate, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -40,7 +40,7 @@ class DatabaseHelper {
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, amount REAL NOT NULL,
       category TEXT NOT NULL, frequency TEXT NOT NULL, custom_days INTEGER,
       next_due_date TEXT, account TEXT, note TEXT, created_at TEXT NOT NULL,
-      is_active INTEGER NOT NULL DEFAULT 1)''');
+      is_active INTEGER NOT NULL DEFAULT 1, auto_pay INTEGER NOT NULL DEFAULT 0)''');
     await db.execute('''CREATE TABLE credit_cards (
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, bank TEXT NOT NULL,
       card_number TEXT NOT NULL, credit_limit REAL NOT NULL, current_balance REAL NOT NULL DEFAULT 0,
@@ -62,7 +62,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, amount REAL NOT NULL,
         category TEXT NOT NULL, frequency TEXT NOT NULL, custom_days INTEGER,
         next_due_date TEXT, account TEXT, note TEXT, created_at TEXT NOT NULL,
-        is_active INTEGER NOT NULL DEFAULT 1)'''); } catch (_) {}
+        is_active INTEGER NOT NULL DEFAULT 1, auto_pay INTEGER NOT NULL DEFAULT 0)'''); } catch (_) {}
       try { await db.execute('''CREATE TABLE IF NOT EXISTS credit_cards (
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, bank TEXT NOT NULL,
         card_number TEXT NOT NULL, credit_limit REAL NOT NULL, current_balance REAL NOT NULL DEFAULT 0,
@@ -73,6 +73,9 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL,
         amount REAL NOT NULL DEFAULT 0, cost_basis REAL, note TEXT,
         created_at TEXT NOT NULL, updated_at TEXT, icon TEXT)''');
+    }
+    if (oldVersion < 5) {
+      try { await db.execute('ALTER TABLE recurring_bills ADD COLUMN auto_pay INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
     }
   }
 

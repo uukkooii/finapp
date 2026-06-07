@@ -24,6 +24,7 @@ class RecurringPage extends StatelessWidget {
                 bill: bill,
                 onToggle: () => rp.toggle(bill),
                 onDelete: () => rp.delete(bill.id!),
+                onEdit: () => RecurringPage.showEditSheet(context, bill),
                 onMarkPaid: () {
                   final txp = Provider.of<TransactionProvider>(context, listen: false);
                   rp.markPaid(bill, txp);
@@ -41,6 +42,17 @@ class RecurringPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => const _AddBillSheet(),
+    );
+  }
+
+  static void showEditSheet(BuildContext context, RecurringBill bill) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.themeCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _AddBillSheet(existing: bill),
     );
   }
 }
@@ -72,12 +84,14 @@ class _BillCard extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onMarkPaid;
+  final VoidCallback onEdit;
 
   const _BillCard({
     required this.bill,
     required this.onToggle,
     required this.onDelete,
     required this.onMarkPaid,
+    required this.onEdit,
   });
 
   String _categoryIcon(String cat) {
@@ -149,7 +163,9 @@ class _BillCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24)),
         child: const Text('🗑️', style: TextStyle(fontSize: 22)),
       ),
-      child: Container(
+      child: GestureDetector(
+        onTap: onEdit,
+        child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -184,6 +200,10 @@ class _BillCard extends StatelessWidget {
                               color: bill.isActive ? context.themeText : context.themeHint)),
                       const SizedBox(width: 8),
                       _FrequencyBadge(label: bill.frequencyLabel),
+                      if (bill.autoPay) ...[
+                        const SizedBox(width: 6),
+                        _FrequencyBadge(label: '自动', auto: true),
+                      ],
                       if (!bill.isActive) ...[
                         const SizedBox(width: 6),
                         const _FrequencyBadge(label: '已暂停', paused: true),
@@ -244,6 +264,7 @@ class _BillCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -251,25 +272,31 @@ class _BillCard extends StatelessWidget {
 class _FrequencyBadge extends StatelessWidget {
   final String label;
   final bool paused;
-  const _FrequencyBadge({required this.label, this.paused = false});
+  final bool auto;
+  const _FrequencyBadge({required this.label, this.paused = false, this.auto = false});
 
   @override
   Widget build(BuildContext context) {
+    final active = auto;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: paused
             ? context.themeDivider
-            : goldColor.withValues(alpha: 0.15),
+            : (active ? incomeGreen.withValues(alpha: 0.15) : goldColor.withValues(alpha: 0.15)),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-            color: paused ? context.themeHint : goldColor.withValues(alpha: 0.4)),
+            color: paused
+                ? context.themeHint
+                : (active ? incomeGreen.withValues(alpha: 0.5) : goldColor.withValues(alpha: 0.4))),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 10,
-          color: paused ? context.themeHint : goldColor,
+          color: paused
+              ? context.themeHint
+              : (active ? incomeGreen : goldColor),
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -280,7 +307,8 @@ class _FrequencyBadge extends StatelessWidget {
 // ── Add Bill Bottom Sheet ─────────────────────────────────────────────────────
 
 class _AddBillSheet extends StatefulWidget {
-  const _AddBillSheet();
+  final RecurringBill? existing;
+  const _AddBillSheet({this.existing});
 
   @override
   State<_AddBillSheet> createState() => _AddBillSheetState();
@@ -297,6 +325,24 @@ class _AddBillSheetState extends State<_AddBillSheet> {
   String? _account;
   DateTime? _nextDueDate;
   bool _saving = false;
+  bool _autoPay = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _nameCtrl.text = e.name;
+      _amountCtrl.text = e.amount.toStringAsFixed(e.amount == e.amount.roundToDouble() ? 0 : 2);
+      _category = e.category;
+      _frequency = e.frequency;
+      _account = e.account;
+      _nextDueDate = e.nextDueDate != null ? DateTime.tryParse(e.nextDueDate!) : null;
+      _autoPay = e.autoPay;
+      if (e.customDays != null) _customDaysCtrl.text = e.customDays.toString();
+      if (e.note != null) _noteCtrl.text = e.note!;
+    }
+  }
 
   @override
   void dispose() {
@@ -358,6 +404,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
     setState(() => _saving = true);
     final now = DateTime.now();
     final bill = RecurringBill(
+      id: widget.existing?.id,
       name: name,
       amount: amount,
       category: _category,
@@ -369,8 +416,14 @@ class _AddBillSheetState extends State<_AddBillSheet> {
       account: _account,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       createdAt: _dateStr(now),
+      autoPay: _autoPay,
     );
-    await Provider.of<RecurringProvider>(context, listen: false).add(bill);
+    final rp = Provider.of<RecurringProvider>(context, listen: false);
+    if (widget.existing != null) {
+      await rp.update(bill);
+    } else {
+      await rp.add(bill);
+    }
     if (mounted) Navigator.pop(context);
   }
 
@@ -387,7 +440,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('添加周期账单',
+                Text(widget.existing != null ? '编辑周期账单' : '添加周期账单',
                     style: TextStyle(
                         color: goldColor,
                         fontSize: 17,
@@ -451,6 +504,36 @@ class _AddBillSheetState extends State<_AddBillSheet> {
             ),
             const SizedBox(height: 12),
             _field('备注', _noteCtrl, hint: '可选'),
+            const SizedBox(height: 12),
+            // 自动记账开关
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _autoPay ? goldColor.withValues(alpha: 0.12) : context.themeCard,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _autoPay ? goldColor.withValues(alpha: 0.4) : Colors.transparent),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_mode, size: 18, color: _autoPay ? goldColor : context.themeHint),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('自动记账', style: TextStyle(fontSize: 14, color: context.themeText, fontWeight: FontWeight.w500)),
+                        Text('到期自动记录，无需手动确认', style: TextStyle(fontSize: 11, color: context.themeHint)),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _autoPay,
+                    onChanged: (v) => setState(() => _autoPay = v),
+                    activeColor: goldColor,
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -463,7 +546,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                child: Text(_saving ? '保存中...' : '添加',
+                child: Text(_saving ? '保存中...' : (widget.existing != null ? '保存修改' : '添加'),
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
               ),

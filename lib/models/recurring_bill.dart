@@ -10,6 +10,7 @@ class RecurringBill {
   final String? note;
   final String createdAt; // 'YYYY-MM-DD'
   final bool isActive;
+  final bool autoPay;  // 自动记账：到期无需手动确认，自动记录并推进
 
   const RecurringBill({
     this.id,
@@ -23,6 +24,7 @@ class RecurringBill {
     this.note,
     required this.createdAt,
     this.isActive = true,
+    this.autoPay = false,
   });
 
   factory RecurringBill.fromMap(Map<String, dynamic> map) {
@@ -38,6 +40,7 @@ class RecurringBill {
       note: map['note'] as String?,
       createdAt: map['created_at'] as String,
       isActive: (map['is_active'] as int? ?? 1) == 1,
+      autoPay: (map['auto_pay'] as int? ?? 0) == 1,
     );
   }
 
@@ -53,6 +56,7 @@ class RecurringBill {
       'note': note,
       'created_at': createdAt,
       'is_active': isActive ? 1 : 0,
+      'auto_pay': autoPay ? 1 : 0,
     };
     if (id != null) m['id'] = id;
     return m;
@@ -70,6 +74,7 @@ class RecurringBill {
     String? note,
     String? createdAt,
     bool? isActive,
+    bool? autoPay,
   }) {
     return RecurringBill(
       id: id ?? this.id,
@@ -83,6 +88,7 @@ class RecurringBill {
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
       isActive: isActive ?? this.isActive,
+      autoPay: autoPay ?? this.autoPay,
     );
   }
 

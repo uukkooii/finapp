@@ -73,4 +73,41 @@ class RecurringProvider extends ChangeNotifier {
     final nextDate = bill.computeNextDueDate();
     await update(bill.copyWith(nextDueDate: nextDate));
   }
+
+  /// 自动记账：处理所有已到期且开启自动记账的账单
+  /// 返回自动处理的数量
+  Future<int> processAutoPay(TransactionProvider txp) async {
+    final now = DateTime.now();
+    final today = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    int count = 0;
+
+    for (final bill in _bills) {
+      if (!bill.isActive || !bill.autoPay || bill.nextDueDate == null) continue;
+      if (bill.nextDueDate!.compareTo(today) > 0) continue; // not due yet
+
+      final tx = Transaction(
+        type: 'expense',
+        amount: bill.amount,
+        category: bill.category,
+        account: bill.account ?? '现金',
+        note: bill.note ?? bill.name,
+        date: today,
+      );
+      await txp.addTransaction(tx);
+
+      final nextDate = bill.computeNextDueDate();
+      // Batch 推进到期日，不逐个通知
+      final updated = bill.copyWith(nextDueDate: nextDate);
+      await _db.updateRecurringBill(updated.toMap());
+      count++;
+    }
+
+    if (count > 0) await _load();
+    return count;
+  }
+
+  /// Toggle autoPay
+  Future<void> toggleAutoPay(RecurringBill bill) async {
+    await update(bill.copyWith(autoPay: !bill.autoPay));
+  }
 }

@@ -26,6 +26,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  bool _autoPayChecked = false;
 
   void _showTransactionList(List<Transaction> transactions, String title, {Color? accent}) {
     showModalBottomSheet(
@@ -47,6 +48,14 @@ class _HomePageState extends State<HomePage> {
     final cp = Provider.of<CreditProvider>(context);
     final ap = Provider.of<AssetProvider>(context);
 
+    // 启动时自动处理已到期的自动记账账单（仅一次）
+    if (!_autoPayChecked) {
+      _autoPayChecked = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        rp.processAutoPay(txp);
+      });
+    }
+
     return RefreshIndicator(
       color: goldColor, backgroundColor: context.themeCard, displacement: 40,
       onRefresh: () async {
@@ -56,6 +65,7 @@ class _HomePageState extends State<HomePage> {
           bp.init(),
           gp.init(),
         ]);
+        await rp.processAutoPay(txp);
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
