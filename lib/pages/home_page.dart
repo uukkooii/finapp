@@ -8,6 +8,7 @@ import '../providers/budget_provider.dart';
 import '../providers/goal_provider.dart';
 import '../providers/recurring_provider.dart';
 import '../providers/credit_provider.dart';
+import '../providers/asset_provider.dart';
 import '../models/transaction.dart';
 import '../models/goal.dart';
 import 'add_transaction_page.dart';
@@ -43,6 +44,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final gp = Provider.of<GoalProvider>(context);
     final rp = Provider.of<RecurringProvider>(context);
     final cp = Provider.of<CreditProvider>(context);
+    final ap = Provider.of<AssetProvider>(context);
 
     return RefreshIndicator(
       color: goldColor, backgroundColor: context.themeCard, displacement: 40,
@@ -54,6 +56,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           _SearchBar(txp: txp),
           const SizedBox(height: 14),
           _NetWorthCard(txp: txp, now: now, shimmer: _shimmerController),
+          const SizedBox(height: 14),
+          _AssetSummaryCard(ap: ap),
           const SizedBox(height: 14),
           _GoalRingsRow(gp: gp),
           const SizedBox(height: 14),
@@ -514,6 +518,66 @@ class _UpcomingAlerts extends StatelessWidget {
               }),
             ]),
     );
+  }
+}
+
+class _AssetSummaryCard extends StatelessWidget {
+  final AssetProvider ap;
+  const _AssetSummaryCard({required this.ap});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = ap.totalAssets;
+    if (total <= 0) {
+      return GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/assets'),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: context.cardDecoration(glowColor: lavenderColor),
+          child: Row(children: [
+            const Text('🏦', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Expanded(child: Text('添加你的资产', style: TextStyle(color: context.themeText, fontWeight: FontWeight.w600))),
+            Text('管理 →', style: TextStyle(color: context.themeSub, fontSize: 13)),
+          ]),
+        ),
+      );
+    }
+    final profit = ap.totalProfit;
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/assets'),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: context.cardDecoration(glowColor: incomeGreen),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Text('🏦', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            const Text('资产管家', style: TextStyle(color: goldColor, fontWeight: FontWeight.bold, fontSize: 15)),
+            const Spacer(),
+            Text('查看 →', style: TextStyle(color: context.themeSub, fontSize: 12)),
+          ]),
+          const SizedBox(height: 12),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: total),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.elasticOut,
+            builder: (_, v, __) => Text('¥${_fmt(v)}',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: context.themeText, letterSpacing: -0.5)),
+          ),
+          if (profit != 0) ...[
+            const SizedBox(height: 4),
+            Text('${profit > 0 ? "📈" : "📉"} 总收益 ${profit > 0 ? "+" : ""}¥${_fmt(profit)}',
+                style: TextStyle(fontSize: 12, color: profit >= 0 ? incomeGreen : expenseRed)),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  String _fmt(num n) {
+    if (n >= 10000) return '${(n / 10000).toStringAsFixed(2)}万';
+    return n.toStringAsFixed(0);
   }
 }
 

@@ -6,6 +6,7 @@ import 'providers/budget_provider.dart';
 import 'providers/goal_provider.dart';
 import 'providers/recurring_provider.dart';
 import 'providers/credit_provider.dart';
+import 'providers/asset_provider.dart';
 import 'pages/home_page.dart';
 import 'pages/analytics_page.dart';
 import 'pages/finance_page.dart';
@@ -13,6 +14,8 @@ import 'pages/goals_page.dart';
 import 'pages/freedom_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/add_transaction_page.dart';
+import 'pages/ai_accounting_page.dart';
+import 'pages/asset_page.dart';
 import 'core/constants.dart';
 
 void main() async {
@@ -44,6 +47,7 @@ class FinApp extends StatelessWidget {
           create: (ctx) => BudgetProvider(ctx.read<TransactionProvider>())..init(),
           update: (_, tp, bp) => bp!,
         ),
+        ChangeNotifierProvider(create: (_) => AssetProvider()..init()),
       ],
       child: MaterialApp(
         title: '金库',
@@ -90,7 +94,11 @@ class FinApp extends StatelessWidget {
           ),
         ),
         home: showOnboarding ? const OnboardingPage() : const MainShell(),
-        routes: {'/home': (_) => const MainShell()},
+        routes: {
+          '/home': (_) => const MainShell(),
+          '/ai': (_) => const AiAccountingPage(),
+          '/assets': (_) => const AssetPage(),
+        },
       ),
     );
   }
@@ -147,6 +155,18 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
           ),
         ),
         actions: [
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/ai'),
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: goldColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text('🤖', style: TextStyle(fontSize: 20)),
+            ),
+          ),
           GestureDetector(
             onTap: () => AddTransactionPage.show(context),
             child: Container(
