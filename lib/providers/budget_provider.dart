@@ -39,8 +39,23 @@ class BudgetProvider extends ChangeNotifier {
     return rows.map<Budget>((r) => Budget.fromMap(r)).toList();
   }
 
+  Future<void> deleteBudget(String month, String category) async {
+    final Database db = await _db.database;
+    await db.delete(
+      'budgets',
+      where: 'month = ? AND category = ?',
+      whereArgs: [month, category],
+    );
+    notifyListeners();
+  }
+
   Future<double> getTotalBudget(String month) async {
     final budgets = await getAllBudgets(month);
+    // If explicit 总计 budget exists, use it
+    for (final b in budgets) {
+      if (b.category == '总计') return b.amount;
+    }
+    // Otherwise sum all category budgets (excluding 总计)
     double total = 0.0;
     for (final b in budgets) {
       total += b.amount;

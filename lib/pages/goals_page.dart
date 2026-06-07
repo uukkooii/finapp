@@ -90,10 +90,10 @@ class _GoalsPageState extends State<GoalsPage> {
           borderRadius: BorderRadius.circular(50),
           onTap: () => _openDialog(context, gp),
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.add_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
               Text('添加目标 ✨', style: TextStyle(color: context.themeText, fontWeight: FontWeight.bold, fontSize: 15)),
             ]),
           ),
@@ -326,10 +326,7 @@ class _GoalCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [context.themeCard, ringColor.withValues(alpha: 0.07)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(24),
         border: isDone
             ? Border.all(color: incomeGreen, width: 1.5)
@@ -341,10 +338,7 @@ class _GoalCard extends StatelessWidget {
           Container(
             width: 52, height: 52,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [ringColor.withValues(alpha: 0.3), ringColor.withValues(alpha: 0.1)],
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-              ),
+              color: ringColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(child: Text(goal.icon ?? '🎯', style: const TextStyle(fontSize: 26))),
@@ -530,7 +524,7 @@ class _EmptyGoals extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(50), onTap: onAdd,
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                 child: Text('🌟 添加第一个目标',
                     style: TextStyle(color: context.themeText, fontWeight: FontWeight.bold, fontSize: 16)),
               ),

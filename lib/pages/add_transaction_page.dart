@@ -7,9 +7,10 @@ import '../models/transaction.dart';
 
 class AddTransactionPage extends StatefulWidget {
   final Transaction? existing;
-  const AddTransactionPage({super.key, this.existing});
+  final String? initialType;
+  const AddTransactionPage({super.key, this.existing, this.initialType});
 
-  static Future<void> show(BuildContext context, {Transaction? edit}) {
+  static Future<void> show(BuildContext context, {Transaction? edit, String? initialType}) {
     final tp = Provider.of<TransactionProvider>(context, listen: false);
     return showModalBottomSheet(
       context: context,
@@ -17,7 +18,7 @@ class AddTransactionPage extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => ChangeNotifierProvider.value(
         value: tp,
-        child: AddTransactionPage(existing: edit),
+        child: AddTransactionPage(existing: edit, initialType: initialType),
       ),
     );
   }
@@ -43,6 +44,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
+    if (widget.initialType != null) {
+      _type = widget.initialType!;
+    }
     final e = widget.existing;
     if (e != null) {
       _type = e.type;
@@ -135,11 +139,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         Container(
           height: screenHeight * 0.88,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: context.themeCardGradient,
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: context.themeCard,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(28),
               topRight: Radius.circular(28),
@@ -228,7 +228,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       child: Row(
         children: [
           _typeBtn('expense', '💸 支出', expenseRed),
-          _typeBtn('income', '💚 收入', incomeGreen),
+          _typeBtn('income', '💰 收入', incomeGreen),
         ],
       ),
     );
@@ -246,19 +246,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
-            gradient: selected
-                ? LinearGradient(
-                    colors: [activeColor.withValues(alpha: 0.9), activeColor],
-                  )
-                : null,
-            color: selected ? null : Colors.transparent,
+            color: selected ? activeColor : Colors.transparent,
             borderRadius: BorderRadius.circular(46),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : context.themeSub,
+              color: selected ? context.themeText : context.themeSub,
               fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               fontSize: 14,
             ),
@@ -290,12 +285,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               duration: const Duration(milliseconds: 150),
               width: 56, height: 64,
               decoration: BoxDecoration(
-                color: selected ? goldColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.06),
+                color: selected ? goldColor.withValues(alpha: 0.2) : context.themeDivider,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: selected ? goldColor : context.themeDivider),
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(c['icon']!, style: TextStyle(fontSize: 24)),
+                Text(c['icon']!, style: const TextStyle(fontSize: 24)),
                 const SizedBox(height: 4),
                 Text(c['name']!, style: TextStyle(fontSize: 9, color: selected ? goldColor : context.themeHint)),
               ]),
@@ -487,10 +482,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                 children: [
                   Text(isIncome ? '💰' : '💸', style: const TextStyle(fontSize: 20)),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     '记 账',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: context.themeBg,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4,

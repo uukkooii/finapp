@@ -107,7 +107,7 @@ class _Slide extends StatelessWidget {
           Container(
             width: 120, height: 120,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: context.themeHeroGradient),
+              color: context.themeHeader1,
               shape: BoxShape.circle,
               boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.2), blurRadius: 30)],
             ),

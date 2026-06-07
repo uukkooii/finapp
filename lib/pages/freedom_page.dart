@@ -202,7 +202,7 @@ class _FreedomPageState extends State<FreedomPage> {
                     ),
                   ],
                   const SizedBox(height: 20),
-                  _ExportButton(),
+                  const _ExportButton(),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -468,7 +468,7 @@ class _ExportButton extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('数据导出', style: TextStyle(color: context.themeText, fontSize: 15, fontWeight: FontWeight.bold)),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text('导出全部交易记录为 CSV 文件', style: TextStyle(color: context.themeSub, fontSize: 11)),
                     ]),
                   ),
@@ -509,7 +509,7 @@ class _ExportButton extends StatelessWidget {
                     }
                   },
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     child: Text('导出 CSV', style: TextStyle(color: context.themeText, fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),

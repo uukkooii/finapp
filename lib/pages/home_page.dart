@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:math' as math;
 import '../core/constants.dart';
 import '../providers/transaction_provider.dart';
@@ -13,27 +12,29 @@ import '../models/transaction.dart';
 import '../models/goal.dart';
 import 'add_transaction_page.dart';
 
+String _categoryIcon(String categoryName) {
+  for (final c in categories) {
+    if (c['name'] == categoryName) return c['icon']!;
+  }
+  return '📌';
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
-  late AnimationController _shimmerController;
+class _HomePageState extends State<HomePage> {
 
-  @override
-  void initState() {
-    super.initState();
-    _shimmerController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    super.dispose();
+  void _showTransactionList(List<Transaction> transactions, String title, {Color? accent}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.themeCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _TransactionListSheet(transactions: transactions, title: title, accent: accent),
+    );
   }
 
   @override
@@ -48,22 +49,44 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     return RefreshIndicator(
       color: goldColor, backgroundColor: context.themeCard, displacement: 40,
-      onRefresh: () async => txp.init(),
+      onRefresh: () async {
+        await Future.wait([
+          txp.init(),
+          ap.reload(),
+          bp.init(),
+          gp.init(),
+        ]);
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _SearchBar(txp: txp),
           const SizedBox(height: 14),
-          _NetWorthCard(txp: txp, now: now, shimmer: _shimmerController),
+          _NetWorthCard(txp: txp, ap: ap, now: now, onTap: () async {
+            final txns = await txp.getTransactionsByMonth(now.year, now.month);
+            if (mounted) _showTransactionList(txns, '${now.month}月全部账单', accent: goldColor);
+          }),
           const SizedBox(height: 14),
           _AssetSummaryCard(ap: ap),
           const SizedBox(height: 14),
           _GoalRingsRow(gp: gp),
           const SizedBox(height: 14),
-          _MonthlySummary(txp: txp, now: now),
+          _MonthlySummary(txp: txp, now: now,
+            onTapIncome: () async {
+              final txns = await txp.getTransactionsByMonth(now.year, now.month);
+              if (mounted) _showTransactionList(txns.where((t) => t.type == 'income').toList(), '${now.month}月收入明细', accent: incomeGreen);
+            },
+            onTapExpense: () async {
+              final txns = await txp.getTransactionsByMonth(now.year, now.month);
+              if (mounted) _showTransactionList(txns.where((t) => t.type == 'expense').toList(), '${now.month}月支出明细', accent: expenseRed);
+            },
+          ),
           const SizedBox(height: 14),
-          _BudgetCard(bp: bp, txp: txp, now: now),
+          _BudgetCard(bp: bp, txp: txp, now: now, onTap: () async {
+            final txns = await txp.getTransactionsByMonth(now.year, now.month);
+            if (mounted) _showTransactionList(txns.where((t) => t.type == 'expense').toList(), '${now.month}月预算支出', accent: goldColor);
+          }),
           const SizedBox(height: 14),
           _UpcomingAlerts(gp: gp, rp: rp, cp: cp, now: now),
           const SizedBox(height: 14),
@@ -76,33 +99,37 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
 class _NetWorthCard extends StatelessWidget {
   final TransactionProvider txp;
+  final AssetProvider ap;
   final DateTime now;
-  final AnimationController shimmer;
-  const _NetWorthCard({required this.txp, required this.now, required this.shimmer});
+  final VoidCallback? onTap;
+  const _NetWorthCard({required this.txp, required this.ap, required this.now, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, double>>>(
-      future: _fetchTwoMonths(),
+    return FutureBuilder<List<dynamic>>(
+      future: _fetchAll(),
       builder: (ctx, snap) {
         final loading = !snap.hasData;
-        final thisMonth = snap.data?[0] ?? {};
-        final lastMonth = snap.data?[1] ?? {};
-        final netWorth = (thisMonth['totalIncome'] ?? 0) - (thisMonth['totalExpense'] ?? 0);
-        final lastNet = (lastMonth['totalIncome'] ?? 0) - (lastMonth['totalExpense'] ?? 0);
+        final data = snap.data;
+        final thisMonth = (data?[0] as Map<String, double>?) ?? {};
+        final lastMonth = (data?[1] as Map<String, double>?) ?? {};
+        final assetTotal = (data?[2] as double?) ?? 0;
+        final monthlyNet = (thisMonth['totalIncome'] ?? 0) - (thisMonth['totalExpense'] ?? 0);
+        final netWorth = monthlyNet + assetTotal;
+        final lastMonthly = (lastMonth['totalIncome'] ?? 0) - (lastMonth['totalExpense'] ?? 0);
+        final lastNet = lastMonthly + assetTotal;
         final pctChange = lastNet != 0 ? ((netWorth - lastNet) / lastNet.abs()) * 100 : 0.0;
         final isUp = pctChange >= 0;
 
-        return AnimatedOpacity(
+        return GestureDetector(
+          onTap: onTap,
+          child: AnimatedOpacity(
           opacity: loading ? 0.5 : 1.0,
           duration: const Duration(milliseconds: 500),
           child: Container(
             width: double.infinity, padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: context.themeHeroGradient,
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-              ),
+              color: context.themeHeader1,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: goldColor.withValues(alpha: 0.25)),
               boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
@@ -120,8 +147,8 @@ class _NetWorthCard extends StatelessWidget {
                   ])
                 : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
-                      Text('💎', style: TextStyle(fontSize: 22)),
-                      SizedBox(width: 8),
+                      const Text('💎', style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 8),
                       Text('净资产', style: TextStyle(color: context.themeSub, fontSize: 14)),
                     ]),
                     const SizedBox(height: 8),
@@ -155,16 +182,17 @@ class _NetWorthCard extends StatelessWidget {
                     ),
                   ]),
           ),
-        );
+        ));
       },
     );
   }
 
-  Future<List<Map<String, double>>> _fetchTwoMonths() async {
+  Future<List<dynamic>> _fetchAll() async {
     final thisMonth = await txp.getMonthlySummary(now.year, now.month);
     final lastDate = DateTime(now.year, now.month - 1);
     final lastMonth = await txp.getMonthlySummary(lastDate.year, lastDate.month);
-    return [thisMonth, lastMonth];
+    final assetTotal = ap.totalAssets;
+    return [thisMonth, lastMonth, assetTotal];
   }
 }
 
@@ -276,7 +304,9 @@ class _GoalRingPainter extends CustomPainter {
 class _MonthlySummary extends StatelessWidget {
   final TransactionProvider txp;
   final DateTime now;
-  const _MonthlySummary({required this.txp, required this.now});
+  final VoidCallback? onTapIncome;
+  final VoidCallback? onTapExpense;
+  const _MonthlySummary({required this.txp, required this.now, this.onTapIncome, this.onTapExpense});
 
   @override
   Widget build(BuildContext context) {
@@ -287,18 +317,21 @@ class _MonthlySummary extends StatelessWidget {
         final expense = snap.data?['totalExpense'] ?? 0.0;
         final balance = snap.data?['balance'] ?? 0.0;
 
-        Widget item(String label, double amount, Color color) => Expanded(
-          child: Column(children: [
-            Text(label, style: TextStyle(fontSize: 11, color: color)),
-            const SizedBox(height: 6),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: amount),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.elasticOut,
-              builder: (_, v, __) => Text('¥${v.toStringAsFixed(0)}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-            ),
-          ]),
+        Widget item(String label, double amount, Color color, {VoidCallback? onTap}) => Expanded(
+          child: GestureDetector(
+            onTap: onTap,
+            child: Column(children: [
+              Text(label, style: TextStyle(fontSize: 11, color: color)),
+              const SizedBox(height: 6),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: amount),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.elasticOut,
+                builder: (_, v, __) => Text('¥${v.toStringAsFixed(0)}',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+              ),
+            ]),
+          ),
         );
 
         return Container(
@@ -313,9 +346,9 @@ class _MonthlySummary extends StatelessWidget {
             ]),
             const SizedBox(height: 14),
             Row(children: [
-              item('收入 💚', income, incomeGreen),
+              item('收入 💚', income, incomeGreen, onTap: onTapIncome),
               Container(width: 1, height: 44, color: context.themeHint),
-              item('支出 🔴', expense, expenseRed),
+              item('支出 🔴', expense, expenseRed, onTap: onTapExpense),
               Container(width: 1, height: 44, color: context.themeHint),
               item('结余 ✨', balance, goldColor),
             ]),
@@ -330,7 +363,8 @@ class _BudgetCard extends StatelessWidget {
   final BudgetProvider bp;
   final TransactionProvider txp;
   final DateTime now;
-  const _BudgetCard({required this.bp, required this.txp, required this.now});
+  final VoidCallback? onTap;
+  const _BudgetCard({required this.bp, required this.txp, required this.now, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +389,9 @@ class _BudgetCard extends StatelessWidget {
             ? remaining / remainingDays : null;
         final emoji = isOver ? '😅' : progress > 0.8 ? '😬' : progress > 0.5 ? '😊' : '🥳';
 
-        return Container(
+        return GestureDetector(
+          onTap: onTap,
+          child: Container(
           padding: const EdgeInsets.all(18),
           decoration: context.cardDecoration(glowColor: isOver ? expenseRed : incomeGreen),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -416,7 +452,7 @@ class _BudgetCard extends StatelessWidget {
                   ]
                 : []),
           ]),
-        );
+        ));
       },
     );
   }
@@ -469,8 +505,8 @@ class _UpcomingAlerts extends StatelessWidget {
       decoration: context.cardDecoration(glowColor: hasAlerts ? accentColor : incomeGreen),
       child: !hasAlerts
           ? Row(children: [
-              Text('💪', style: TextStyle(fontSize: 26)),
-              SizedBox(width: 12),
+              const Text('💪', style: TextStyle(fontSize: 26)),
+              const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('太棒了！', style: TextStyle(color: context.themeText, fontSize: 14, fontWeight: FontWeight.bold)),
                 Text('继续保持良好的储蓄习惯 ✨', style: TextStyle(color: context.themeSub, fontSize: 12)),
@@ -632,10 +668,10 @@ class _RecentTransactionsState extends State<_RecentTransactions> {
             const SizedBox(height: 10),
             if (txns.isEmpty)
               Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(child: Column(children: [
-                  Text('🧾', style: TextStyle(fontSize: 40)),
-                  SizedBox(height: 8),
+                  const Text('🧾', style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 8),
                   Text('还没有记录哦～', style: TextStyle(color: context.themeHint, fontSize: 13)),
                   Text('点击 + 开始记账吧！', style: TextStyle(color: context.themeHint, fontSize: 11)),
                 ])),
@@ -666,9 +702,7 @@ class _SwipableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = transaction;
     final isIncome = t.type == 'income';
-    final icon = categories.firstWhere(
-      (c) => c['name'] == t.category, orElse: () => {'icon': '📌'},
-    )['icon']!;
+    final icon = _categoryIcon(t.category);
 
     return Dismissible(
       key: ValueKey(t.id),
@@ -751,9 +785,15 @@ class _SearchBarState extends State<_SearchBar> {
           decoration: InputDecoration(
             hintText: '🔍 搜索交易...', hintStyle: TextStyle(color: context.themeHint, fontSize: 14),
             prefixIcon: Icon(Icons.search, color: context.themeHint, size: 20),
-            suffixIcon: Icon(Icons.close, color: context.themeHint, size: 18),
+            suffixIcon: GestureDetector(
+              onTap: () {
+                _ctrl.clear();
+                _search('');
+              },
+              child: Icon(Icons.close, color: context.themeHint, size: 18),
+            ),
             border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
       ),
@@ -764,8 +804,7 @@ class _SearchBarState extends State<_SearchBar> {
           child: Column(
             children: _results.take(5).map((t) {
               final isInc = t.type == 'income';
-              String icon = '📌';
-              for (final c in categories) { if (c['name'] == t.category) { icon = c['icon']!; break; } }
+              String icon = _categoryIcon(t.category);
               return ListTile(
                 dense: true, leading: Text(icon, style: const TextStyle(fontSize: 22)),
                 title: Text(t.category, style: TextStyle(fontSize: 13, color: context.themeText)),
@@ -779,5 +818,93 @@ class _SearchBarState extends State<_SearchBar> {
         ),
       ],
     ]);
+  }
+}
+
+class _TransactionListSheet extends StatelessWidget {
+  final List<Transaction> transactions;
+  final String title;
+  final Color? accent;
+
+  const _TransactionListSheet({
+    required this.transactions,
+    required this.title,
+    this.accent,
+  });
+
+  String _fmt(n) {
+    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}万';
+    return n.toStringAsFixed(0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final income = transactions.where((t) => t.type == 'income').fold<double>(0, (s, t) => s + t.amount);
+    final expense = transactions.where((t) => t.type == 'expense').fold<double>(0, (s, t) => s + t.amount);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (ctx, scrollCtrl) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: context.themeHint, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: accent ?? goldColor))),
+            if (income > 0)
+              Padding(padding: const EdgeInsets.only(right: 12), child: Text('收 ¥${_fmt(income)}', style: const TextStyle(fontSize: 12, color: incomeGreen))),
+            if (expense > 0)
+              Text('支 ¥${_fmt(expense)}', style: const TextStyle(fontSize: 12, color: expenseRed)),
+          ]),
+          const SizedBox(height: 12),
+          Expanded(
+            child: transactions.isEmpty
+                ? Center(child: Text('暂无记录 📭', style: TextStyle(color: context.themeHint)))
+                : ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: transactions.length,
+                    itemBuilder: (_, i) {
+                      final t = transactions[i];
+                      final isInc = t.type == 'income';
+                      final icon = _categoryIcon(t.category);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: GestureDetector(
+                          onTap: () => AddTransactionPage.show(context, edit: t),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                            child: Row(children: [
+                              Container(
+                                width: 36, height: 36,
+                                decoration: BoxDecoration(
+                                  color: (isInc ? incomeGreen : expenseRed).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(child: Text(icon, style: const TextStyle(fontSize: 18))),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(t.category, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.themeText)),
+                                if (t.note != null && t.note!.isNotEmpty)
+                                  Text(t.note!, style: TextStyle(fontSize: 11, color: context.themeHint), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ])),
+                              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                Text('${isInc ? '+' : '-'}¥${t.amount.toStringAsFixed(0)}',
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isInc ? incomeGreen : expenseRed)),
+                                Text(t.date, style: TextStyle(fontSize: 10, color: context.themeHint)),
+                              ]),
+                            ]),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ]),
+      ),
+    );
   }
 }

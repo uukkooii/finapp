@@ -37,6 +37,7 @@ class _AiAccountingPageState extends State<AiAccountingPage> {
     setState(() {
       _result = result;
       _type = result.type;
+      _history.remove(text); // 去重：如果已有相同记录，先移除再插入到最前
       _history.insert(0, text);
       if (_history.length > 10) _history.removeLast();
     });
@@ -65,7 +66,7 @@ class _AiAccountingPageState extends State<AiAccountingPage> {
       backgroundColor: context.themeBg,
       appBar: AppBar(
         backgroundColor: context.themeCard,
-        title: const Text('🤖 AI 记账', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('🤖 你说我记', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Padding(
@@ -85,13 +86,15 @@ class _AiAccountingPageState extends State<AiAccountingPage> {
                       hintText: '说说今天花了什么...',
                       hintStyle: TextStyle(color: context.themeHint),
                       border: InputBorder.none,
-                      suffixIcon: Row(mainAxisSize: MainAxisSize.min, children: [
-                        IconButton(icon: Icon(Icons.mic, color: goldColor), onPressed: () {
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.mic, color: goldColor),
+                        onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('🎤 语音输入需要手机端支持，暂时请用文字输入')),
                           );
-                        }, tooltip: '语音输入'),
-                      ]),
+                        },
+                        tooltip: '语音输入',
+                      ),
                     ),
                     onSubmitted: (_) => _analyze(),
                   ),
@@ -104,10 +107,11 @@ class _AiAccountingPageState extends State<AiAccountingPage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: goldColor,
+                    foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: _analyze,
-                  child: const Text('✨ 智能识别', style: TextStyle(fontSize: 16)),
+                  child: const Text('智能识别', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 10),
@@ -171,7 +175,14 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: context.cardDecoration(glowColor: type == 'income' ? incomeGreen : expenseRed),
+      decoration: BoxDecoration(
+        color: context.themeCard,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: (type == 'income' ? incomeGreen : goldColor).withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
       child: Column(children: [
         // Type toggle
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -200,7 +211,7 @@ class _ResultCard extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             onPressed: onSave,
-            child: const Text('✓ 确认记账', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text('✓ 确认记账', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.themeBg)),
           ),
         ),
       ]),

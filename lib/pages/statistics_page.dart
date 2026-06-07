@@ -22,6 +22,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       children: [
         _monthSelector(),
         const SizedBox(height: 16),
+        _lineCard(txp),
+        const SizedBox(height: 16),
         _pieCard(txp),
         const SizedBox(height: 16),
         _barCard(txp),
@@ -42,11 +44,164 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
+  Widget _lineCard(TransactionProvider txp) {
+    return FutureBuilder<Map<int, Map<String, double>>>(
+      future: txp.getDailyTrend(_month.year, _month.month),
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return _card(child: const _EmptyData(label: '加载中...'));
+        }
+        if (snap.hasError || !snap.hasData) {
+          return _card(child: const _EmptyData(label: '暂无数据'));
+        }
+        final data = snap.data!;
+        final maxDays = data.length;
+        if (maxDays == 0) {
+          return _card(child: const _EmptyData(label: '本月暂无数据'));
+        }
+        final maxVal = data.values
+            .map((m) => (m['income']! > m['expense']! ? m['income']! : m['expense']!))
+            .fold(0.0, (a, b) => a > b ? a : b);
+
+        final incomeSpots = data.entries
+            .where((e) => e.value['income']! > 0)
+            .map((e) => FlSpot(e.key.toDouble(), e.value['income']!))
+            .toList();
+        final expenseSpots = data.entries
+            .where((e) => e.value['expense']! > 0)
+            .map((e) => FlSpot(e.key.toDouble(), e.value['expense']!))
+            .toList();
+
+        if (incomeSpots.isEmpty && expenseSpots.isEmpty) {
+          return _card(child: const _EmptyData(label: '本月暂无数据'));
+        }
+
+        return _card(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Row(children: [
+              Text('📈', style: TextStyle(fontSize: 16)),
+              SizedBox(width: 6),
+              Text('每日趋势', style: TextStyle(color: goldColor, fontWeight: FontWeight.bold, fontSize: 15)),
+            ]),
+            const SizedBox(height: 4),
+            Row(children: [
+              _legendDot(incomeGreen, '收入'),
+              const SizedBox(width: 16),
+              _legendDot(expenseRed, '支出'),
+            ]),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  minX: 1,
+                  maxX: maxDays.toDouble(),
+                  minY: 0,
+                  maxY: maxVal > 0 ? maxVal * 1.15 : 100,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: maxVal > 0 ? _niceInterval(maxVal) : 50,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: context.themeDivider,
+                      strokeWidth: 0.5,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 36,
+                        getTitlesWidget: (v, _) => Text(
+                          v >= 10000 ? '${(v / 10000).toStringAsFixed(1)}万' : v.toStringAsFixed(0),
+                          style: TextStyle(fontSize: 9, color: context.themeHint),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: maxDays > 15 ? 3 : 1,
+                        getTitlesWidget: (v, _) => Text(
+                          '${v.toInt()}日',
+                          style: TextStyle(fontSize: 10, color: context.themeHint),
+                        ),
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    if (incomeSpots.isNotEmpty)
+                      LineChartBarData(
+                        spots: incomeSpots,
+                        isCurved: true,
+                        curveSmoothness: 0.3,
+                        color: incomeGreen,
+                        barWidth: 2.5,
+                        dotData: FlDotData(
+                          show: maxDays <= 15,
+                          getDotPainter: (spot, _, __, ___) =>
+                              FlDotCirclePainter(radius: 3, color: incomeGreen, strokeWidth: 0),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: incomeGreen.withValues(alpha: 0.08),
+                        ),
+                      ),
+                    if (expenseSpots.isNotEmpty)
+                      LineChartBarData(
+                        spots: expenseSpots,
+                        isCurved: true,
+                        curveSmoothness: 0.3,
+                        color: expenseRed,
+                        barWidth: 2.5,
+                        dotData: FlDotData(
+                          show: maxDays <= 15,
+                          getDotPainter: (spot, _, __, ___) =>
+                              FlDotCirclePainter(radius: 3, color: expenseRed, strokeWidth: 0),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: expenseRed.withValues(alpha: 0.08),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ]),
+        );
+      },
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 4),
+      Text(label, style: TextStyle(fontSize: 11, color: color)),
+    ]);
+  }
+
+  double _niceInterval(double maxVal) {
+    if (maxVal <= 100) return 25;
+    if (maxVal <= 500) return 100;
+    if (maxVal <= 2000) return 500;
+    if (maxVal <= 10000) return 2000;
+    if (maxVal <= 50000) return 10000;
+    return 20000;
+  }
+
   Widget _pieCard(TransactionProvider txp) {
     return FutureBuilder<Map<String, double>>(
       future: txp.getCategoryBreakdown(_month.year, _month.month),
       builder: (ctx, snap) {
-        if (!snap.hasData || snap.data!.isEmpty) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return _card(child: const _EmptyData(label: '加载中...'));
+        }
+        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
           return _card(
               child: const _EmptyData(label: '本月暂无支出数据'));
         }
@@ -83,31 +238,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   children: [
                     Expanded(
                       flex: 3,
-                      child: PieChart(
-                        PieChartData(
-                          sections: List.generate(
-                              entries.length, (i) {
-                            final pct = total > 0
-                                ? entries[i].value / total
-                                : 0.0;
-                            return PieChartSectionData(
-                              color:
-                                  colors[i % colors.length],
-                              value: entries[i].value,
-                              title: pct > 0.05
-                                  ? '${(pct * 100).toStringAsFixed(0)}%'
-                                  : '',
-                              radius: 80,
-                              titleStyle: TextStyle(
-                                  fontSize: 11,
-                                  color: context.themeText,
-                                  fontWeight:
-                                      FontWeight.bold),
-                            );
-                          }),
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 28,
-                        ),
+                      child: _InteractivePieChart(
+                        entries: entries,
+                        total: total,
+                        colors: colors,
                       ),
                     ),
                     Expanded(
@@ -230,9 +364,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
     return FutureBuilder<List<Map<String, double>>>(
       future: _getMonthlyData(txp),
       builder: (ctx, snap) {
-        if (!snap.hasData) {
+        if (snap.connectionState == ConnectionState.waiting) {
           return _card(
               child: const _EmptyData(label: '加载中...'));
+        }
+        if (snap.hasError || !snap.hasData) {
+          return _card(
+              child: const _EmptyData(label: '暂无数据'));
         }
         final data = snap.data!;
         double maxY = 100;
@@ -338,7 +476,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     }),
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
-                        tooltipBgColor: const Color(0xFF0F3460),
+                        tooltipBgColor: const Color(0xFF1A1A2E),
                         getTooltipItem: (group, groupIndex,
                             rod, rodIndex) {
                           final label =
@@ -475,6 +613,69 @@ class _StatisticsPageState extends State<StatisticsPage> {
         Color(0xFFF47373),
         Color(0xFF4CA1AF),
       ];
+}
+
+/// 独立 StatefulWidget 隔离饼图触摸状态 — 点击不触发全页重建
+class _InteractivePieChart extends StatefulWidget {
+  final List<MapEntry<String, double>> entries;
+  final double total;
+  final List<Color> colors;
+  const _InteractivePieChart({
+    required this.entries,
+    required this.total,
+    required this.colors,
+  });
+
+  @override
+  State<_InteractivePieChart> createState() => _InteractivePieChartState();
+}
+
+class _InteractivePieChartState extends State<_InteractivePieChart> {
+  int _touchedIndex = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    return PieChart(
+      PieChartData(
+        pieTouchData: PieTouchData(
+          touchCallback: (event, response) {
+            setState(() {
+              if (!event.isInterestedForInteractions ||
+                  response == null ||
+                  response.touchedSection == null) {
+                _touchedIndex = -1;
+                return;
+              }
+              _touchedIndex =
+                  response.touchedSection!.touchedSectionIndex;
+            });
+          },
+        ),
+        sections: List.generate(widget.entries.length, (i) {
+          final pct = widget.total > 0
+              ? widget.entries[i].value / widget.total
+              : 0.0;
+          final isTouched = _touchedIndex == i;
+          return PieChartSectionData(
+            color: widget.colors[i % widget.colors.length],
+            value: widget.entries[i].value,
+            title: isTouched
+                ? '${widget.entries[i].key}\n${(pct * 100).toStringAsFixed(0)}%'
+                : pct > 0.05
+                    ? '${(pct * 100).toStringAsFixed(0)}%'
+                    : '',
+            radius: isTouched ? 95 : 75,
+            titleStyle: TextStyle(
+                fontSize: isTouched ? 12 : 11,
+                color: context.themeText,
+                fontWeight: FontWeight.bold),
+          );
+        }),
+        sectionsSpace: 2,
+        centerSpaceRadius: 28,
+      ),
+    );
+  }
 }
 
 class _EmptyData extends StatelessWidget {

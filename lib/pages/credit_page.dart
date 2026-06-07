@@ -14,7 +14,7 @@ class CreditPage extends StatelessWidget {
     final cards = cp.cards;
 
     return cards.isEmpty
-        ? _EmptyState()
+        ? const _EmptyState()
         : SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             child: Column(
@@ -42,7 +42,7 @@ class CreditPage extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  _EmptyState();
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +50,10 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('💳', style: TextStyle(fontSize: 64)),
-          SizedBox(height: 16),
+          const Text('💳', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
           Text('还没有信用卡', style: TextStyle(color: context.themeSub, fontSize: 16)),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text('点击右下角 + 添加', style: TextStyle(color: context.themeHint, fontSize: 13)),
         ],
       ),
@@ -73,10 +73,7 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: context.themeCardGradient,
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: expenseRed.withValues(alpha: 0.25)),
         boxShadow: [BoxShadow(color: expenseRed.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8))],
@@ -85,8 +82,8 @@ class _SummaryCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('💳', style: TextStyle(fontSize: 16)),
-              SizedBox(width: 8),
+              const Text('💳', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
               Text('总负债', style: TextStyle(color: context.themeSub, fontSize: 13)),
             ]),
             const SizedBox(height: 6),
@@ -187,11 +184,9 @@ class _PaymentCalendar extends StatelessWidget {
               Container(
                 width: 38, height: 38,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: days <= 3
-                        ? [expenseRed.withValues(alpha: 0.25), expenseRed.withValues(alpha: 0.1)]
-                        : [goldColor.withValues(alpha: 0.2), goldColor.withValues(alpha: 0.05)],
-                  ),
+                  color: days <= 3
+                      ? expenseRed.withValues(alpha: 0.18)
+                      : goldColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -257,10 +252,7 @@ class _CardTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [context.themeCard, color.withValues(alpha: 0.08)],
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-          ),
+          color: context.themeCard,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: color.withValues(alpha: 0.25)),
           boxShadow: [BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
@@ -270,10 +262,7 @@ class _CardTile extends StatelessWidget {
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.1)],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                ),
+                color: color.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(Icons.credit_card, color: color, size: 22),
@@ -609,7 +598,7 @@ class _EditCardSheetState extends State<_EditCardSheet> {
                   borderRadius: BorderRadius.circular(50),
                   onTap: _save,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Center(child: Text('保存 ✨',
                         style: TextStyle(color: context.themeText, fontWeight: FontWeight.bold, fontSize: 16))),
                   ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // ── Dark mode palette ──
-const Color bgColor = Color(0xFF1E1B2E);
+const Color bgColor = Color(0xFF201A30);
 const Color cardColor = Color(0xFF2A2540);
 const Color goldColor = Color(0xFFFF8FAB);
 const Color accentColor = Color(0xFFFFB347);
@@ -50,11 +50,7 @@ extension ThemeColors on BuildContext {
 
   Decoration themeCardDecoration({Color? glowColor, BorderRadius? radius}) {
     return BoxDecoration(
-      gradient: LinearGradient(
-        colors: themeCardGradient,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+      color: themeCard,
       borderRadius: radius ?? BorderRadius.circular(24),
       boxShadow: [
         BoxShadow(
@@ -69,11 +65,7 @@ extension ThemeColors on BuildContext {
   // Theme-aware cardDecoration for use with BuildContext
   BoxDecoration cardDecoration({Color? glowColor, BorderRadius? radius}) {
     return BoxDecoration(
-      gradient: LinearGradient(
-        colors: themeCardGradient,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+      color: themeCard,
       borderRadius: radius ?? BorderRadius.circular(24),
       boxShadow: [
         BoxShadow(
@@ -90,11 +82,7 @@ extension ThemeColors on BuildContext {
 BoxDecoration cardDecoration({Color? color, BorderRadius? radius, Color? glowColor}) {
   final base = color ?? cardColor;
   return BoxDecoration(
-    gradient: LinearGradient(
-      colors: [base, base.withValues(alpha: 0.7)],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
+    color: base,
     borderRadius: radius ?? BorderRadius.circular(24),
     boxShadow: [
       BoxShadow(

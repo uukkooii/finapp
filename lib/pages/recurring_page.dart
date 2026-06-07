@@ -54,11 +54,11 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('🔄', style: TextStyle(fontSize: 56)),
-          SizedBox(height: 16),
+          const Text('🔄', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
           Text('还没有周期账单',
               style: TextStyle(color: context.themeSub, fontSize: 16)),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text('点击右下角 + 添加',
               style: TextStyle(color: context.themeHint, fontSize: 13)),
         ],
@@ -153,11 +153,7 @@ class _BillCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [context.themeCard, context.themeCard.withValues(alpha: 0.7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: context.themeCard,
           borderRadius: BorderRadius.circular(24),
           border: bill.isActive && days <= 7
               ? Border.all(color: urgency.withValues(alpha: 0.5))
@@ -330,6 +326,19 @@ class _AddBillSheetState extends State<_AddBillSheet> {
     if (picked != null) setState(() => _nextDueDate = picked);
   }
 
+  String _defaultNextDue() {
+    final now = DateTime.now();
+    switch (_frequency) {
+      case 'monthly': return _dateStr(DateTime(now.year, now.month + 1, now.day));
+      case 'quarterly': return _dateStr(DateTime(now.year, now.month + 3, now.day));
+      case 'yearly': return _dateStr(DateTime(now.year + 1, now.month, now.day));
+      case 'custom':
+        final days = int.tryParse(_customDaysCtrl.text) ?? 30;
+        return _dateStr(now.add(Duration(days: days)));
+      default: return _dateStr(now.add(const Duration(days: 30)));
+    }
+  }
+
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
@@ -356,7 +365,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
       customDays: _frequency == 'custom'
           ? int.tryParse(_customDaysCtrl.text)
           : null,
-      nextDueDate: _nextDueDate != null ? _dateStr(_nextDueDate!) : null,
+      nextDueDate: _nextDueDate != null ? _dateStr(_nextDueDate!) : _defaultNextDue(),
       account: _account,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       createdAt: _dateStr(now),
@@ -414,7 +423,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 14),
                       decoration: BoxDecoration(
-                          color: const Color(0xFF0F3460),
+                          color: context.themeCard,
                           borderRadius: BorderRadius.circular(10)),
                       child: Row(
                         children: [
@@ -478,7 +487,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
         hintText: hint,
         hintStyle: TextStyle(color: context.themeHint),
         filled: true,
-        fillColor: const Color(0xFF0F3460),
+        fillColor: context.themeCard,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none),
@@ -500,7 +509,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: selected ? goldColor.withValues(alpha: 0.2) : const Color(0xFF0F3460),
+              color: selected ? goldColor.withValues(alpha: 0.2) : context.themeCard,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                   color: selected ? goldColor : Colors.transparent),
@@ -534,7 +543,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? goldColor.withValues(alpha: 0.2) : const Color(0xFF0F3460),
+                color: selected ? goldColor.withValues(alpha: 0.2) : context.themeCard,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: selected ? goldColor : Colors.transparent),
@@ -559,7 +568,7 @@ class _AddBillSheetState extends State<_AddBillSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-          color: const Color(0xFF0F3460),
+          color: context.themeCard,
           borderRadius: BorderRadius.circular(10)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(

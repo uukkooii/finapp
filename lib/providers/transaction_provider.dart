@@ -70,6 +70,24 @@ class TransactionProvider extends ChangeNotifier {
     return breakdown;
   }
 
+  /// 获取当月每日收支趋势 {day: {income: xxx, expense: xxx}}
+  Future<Map<int, Map<String, double>>> getDailyTrend(int year, int month) async {
+    final txns = await getTransactionsByMonth(year, month);
+    final trend = <int, Map<String, double>>{};
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    for (int d = 1; d <= daysInMonth; d++) {
+      trend[d] = {'income': 0, 'expense': 0};
+    }
+    for (final t in txns) {
+      try {
+        final day = int.parse(t.date.split('-').last);
+        trend[day]![t.type == 'income' ? 'income' : 'expense'] =
+            (trend[day]![t.type == 'income' ? 'income' : 'expense'] ?? 0) + t.amount;
+      } catch (_) {}
+    }
+    return trend;
+  }
+
   Future<List<Transaction>> getRecentTransactions(int limit) async {
     final Database db = await _db.database;
     final rows = await db.query(

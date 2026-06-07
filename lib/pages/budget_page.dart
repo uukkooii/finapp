@@ -27,9 +27,9 @@ class _BudgetPageState extends State<BudgetPage> {
       padding: const EdgeInsets.all(16),
       children: [
         _monthSelector(),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         _totalBudgetCard(bp, txp),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         _categoryBudgetsCard(bp, txp),
       ],
     );
@@ -70,11 +70,7 @@ class _BudgetPageState extends State<BudgetPage> {
         return Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [context.themeCard, context.themeCard.withValues(alpha: 0.7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: context.themeCard,
             borderRadius: BorderRadius.circular(24),
             border: isOver
                 ? Border.all(color: expenseRed, width: 1.5)
@@ -117,7 +113,7 @@ class _BudgetPageState extends State<BudgetPage> {
                       Text(
                         totalBudget > 0
                             ? '¥${totalBudget.toStringAsFixed(0)}'
-                            : '未设置',
+                            : '(自动合计)',
                         style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -255,7 +251,7 @@ class _BudgetPageState extends State<BudgetPage> {
               const SizedBox(height: 8),
               if (visible.isEmpty)
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Center(
                       child: Text('点击添加分类预算',
                           style: TextStyle(
@@ -321,6 +317,17 @@ class _BudgetPageState extends State<BudgetPage> {
                           fontWeight: FontWeight.bold),
                     ),
                   ),
+                GestureDetector(
+                  onTap: () {
+                    bp.deleteBudget(_monthStr, cat);
+                    setState(() {});
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 4),
+                    child: Icon(Icons.close, color: Colors.white38, size: 16),
+                  ),
+                ),
+                const SizedBox(width: 4),
                 const SizedBox(width: 8),
                 Text(
                   budget > 0

@@ -17,11 +17,13 @@ import 'pages/add_transaction_page.dart';
 import 'pages/ai_accounting_page.dart';
 import 'pages/asset_page.dart';
 import 'core/constants.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final showOnboarding = !(prefs.getBool('onboarding_done') ?? false);
+  await QuickNotifier().init();
   runApp(FinApp(showOnboarding: showOnboarding));
 }
 
@@ -52,6 +54,7 @@ class FinApp extends StatelessWidget {
       child: MaterialApp(
         title: '金库',
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
         themeMode: ThemeMode.system,
         theme: ThemeData(
           brightness: Brightness.light,
@@ -69,7 +72,7 @@ class FinApp extends StatelessWidget {
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(50))),
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(50))),
             ),
           ),
         ),
@@ -89,7 +92,7 @@ class FinApp extends StatelessWidget {
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(50))),
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(50))),
             ),
           ),
         ),
@@ -124,6 +127,8 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
       upperBound: 1.0,
       value: 1.0,
     );
+    // 显示通知栏快捷记账入口
+    QuickNotifier().show();
   }
 
   @override
@@ -140,7 +145,7 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
     FreedomPage(),
   ];
 
-  final titles = ['金库 ✨', '分析 📊', '理财 💰', '目标 🎯', '自由 🚀'];
+  final titles = ['🏦 金库', '📊 分析', '💰 理财', '🎯 目标', '🚀 自由'];
 
   @override
   Widget build(BuildContext context) {

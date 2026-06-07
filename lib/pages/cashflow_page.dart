@@ -50,7 +50,11 @@ class _CashflowPageState extends State<CashflowPage> {
                   projections: data.dailyBalances,
                   simProjections: simData?.dailyBalances,
                 ),
-                SizedBox(height: 16),
+                if (data.upcomingBillsTotal > 0) ...[
+                  const SizedBox(height: 16),
+                  _UpcomingBillsCard(rp: rp),
+                ],
+                const SizedBox(height: 16),
                 _StatsRow(data: simData ?? data),
                 if (data.totalCreditDebt > 0) ...[
                   const SizedBox(height: 10),
@@ -58,7 +62,7 @@ class _CashflowPageState extends State<CashflowPage> {
                 ],
                 const SizedBox(height: 16),
                 _AlertCard(data: simData ?? data),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 _SimulatorCard(
                   controller: _simCtrl,
                   simAmount: _simAmount,
@@ -206,11 +210,7 @@ class _HeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: context.themeCardGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: goldColor.withValues(alpha: 0.3)),
         boxShadow: [
@@ -221,8 +221,8 @@ class _HeaderCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Text('💰', style: TextStyle(fontSize: 18)),
-            SizedBox(width: 8),
+            const Text('💰', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
             Text('本月结余（估算起点）', style: TextStyle(color: context.themeSub, fontSize: 13)),
           ]),
           const SizedBox(height: 8),
@@ -397,10 +397,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [context.themeCard, color.withValues(alpha: 0.08)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
@@ -430,10 +427,7 @@ class _CreditDebtCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [context.themeCard, color.withValues(alpha: 0.08)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: color.withValues(alpha: 0.25)),
         boxShadow: [BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
@@ -471,10 +465,7 @@ class _AlertCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [expenseRed.withValues(alpha: 0.12), expenseRed.withValues(alpha: 0.04)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+        color: expenseRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: expenseRed.withValues(alpha: 0.3)),
       ),
@@ -556,7 +547,7 @@ class _SimulatorCard extends StatelessWidget {
                   if (val != null && val > 0) onSimulate(val);
                 },
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   child: Text('模拟', style: TextStyle(color: context.themeText, fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -585,5 +576,58 @@ class _SimulatorCard extends StatelessWidget {
         ],
       ]),
     );
+  }
+}
+
+class _UpcomingBillsCard extends StatelessWidget {
+  final RecurringProvider rp;
+  const _UpcomingBillsCard({required this.rp});
+
+  @override
+  Widget build(BuildContext context) {
+    final upcoming = rp.getUpcoming(30);
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    final total = upcoming.fold(0.0, (sum, b) => sum + b.amount);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: context.cardDecoration(glowColor: accentColor),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('📅', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 6),
+          const Text('即将到来的周期支出', style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 15)),
+          const Spacer(),
+          Text('共 ¥${total.toStringAsFixed(0)}', style: TextStyle(color: context.themeSub, fontSize: 12)),
+        ]),
+        const SizedBox(height: 12),
+        ...upcoming.take(5).map((b) {
+          final days = _daysUntil(b.nextDueDate);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                child: Center(child: Text(b.frequency == 'monthly' ? '🔄' : b.frequency == 'quarterly' ? '📆' : '⏰', style: const TextStyle(fontSize: 16))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(b.name, style: TextStyle(fontSize: 13, color: context.themeText))),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text('¥${b.amount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: accentColor)),
+                Text(days == 0 ? '今天' : '$days天后', style: TextStyle(fontSize: 11, color: context.themeSub)),
+              ]),
+            ]),
+          );
+        }),
+        if (upcoming.length > 5)
+          Text('... 还有 ${upcoming.length - 5} 笔', style: TextStyle(fontSize: 11, color: context.themeHint)),
+      ]),
+    );
+  }
+
+  int _daysUntil(String? dateStr) {
+    if (dateStr == null) return 999;
+    return DateTime.parse(dateStr).difference(DateTime.now()).inDays;
   }
 }
