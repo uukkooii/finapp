@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:confetti/confetti.dart';
 import '../core/constants.dart';
 import '../providers/goal_provider.dart';
+import '../providers/account_provider.dart';
 import '../models/goal.dart';
 
 Color _hexToColor(String hex) {
@@ -195,7 +196,8 @@ class _GoalsPageState extends State<GoalsPage> {
                         DropdownMenuItem<String?>(
                             value: null,
                             child: Text('不关联账户', style: TextStyle(color: context.themeSub))),
-                        ...accounts.map((a) => DropdownMenuItem<String?>(value: a, child: Text(a))),
+                        ...Provider.of<AccountProvider>(context, listen: false).accounts
+                            .map((a) => DropdownMenuItem<String?>(value: a, child: Text(a))),
                       ],
                       onChanged: (v) => setS(() => selectedAccount = v),
                     ),

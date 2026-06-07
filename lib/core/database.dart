@@ -153,4 +153,23 @@ class DatabaseHelper {
       (await database).update('assets', row, where: 'id = ?', whereArgs: [row['id']]);
   Future<int> deleteAsset(int id) async =>
       (await database).delete('assets', where: 'id = ?', whereArgs: [id]);
+
+  // ── Account CRUD ──
+  Future<List<Map<String, dynamic>>> getAccounts() async =>
+      (await database).query('accounts', orderBy: 'id ASC');
+  Future<int> insertAccount(Map<String, dynamic> row) async =>
+      (await database).insert('accounts', row);
+  Future<int> updateAccount(Map<String, dynamic> row) async =>
+      (await database).update('accounts', row, where: 'id = ?', whereArgs: [row['id']]);
+  Future<int> deleteAccount(int id) async =>
+      (await database).delete('accounts', where: 'id = ?', whereArgs: [id]);
+  Future<void> seedDefaultAccounts() async {
+    final existing = await getAccounts();
+    if (existing.isEmpty) {
+      final defaults = ['现金', '银行卡', '微信', '支付宝'];
+      for (final name in defaults) {
+        await insertAccount({'name': name, 'type': 'default', 'balance': 0.0});
+      }
+    }
+  }
 }

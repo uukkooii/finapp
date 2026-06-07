@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../core/constants.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/account_provider.dart';
 import '../models/transaction.dart';
+import 'account_manage_page.dart';
 
 class AddTransactionPage extends StatefulWidget {
   final Transaction? existing;
@@ -307,6 +309,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       child: Row(
         children: [
           Expanded(child: _accountDropdown()),
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountManagePage())),
+            child: const Icon(Icons.settings, size: 20, color: goldColor),
+          ),
           const SizedBox(width: 10),
           Expanded(child: _datePicker()),
         ],
@@ -327,7 +333,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           dropdownColor: context.themeCard,
           style: TextStyle(color: context.themeText),
           isExpanded: true,
-          items: accounts.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+          items: Provider.of<AccountProvider>(context, listen: false).accounts
+              .map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
           onChanged: (v) => setState(() => _selectedAccount = v!),
         ),
       ),

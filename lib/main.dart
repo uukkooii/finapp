@@ -7,6 +7,7 @@ import 'providers/goal_provider.dart';
 import 'providers/recurring_provider.dart';
 import 'providers/credit_provider.dart';
 import 'providers/asset_provider.dart';
+import 'providers/account_provider.dart';
 import 'pages/home_page.dart';
 import 'pages/analytics_page.dart';
 import 'pages/finance_page.dart';
@@ -50,6 +51,7 @@ class FinApp extends StatelessWidget {
           update: (_, tp, bp) => bp!,
         ),
         ChangeNotifierProvider(create: (_) => AssetProvider()..init()),
+        ChangeNotifierProvider(create: (_) => AccountProvider()..init()),
       ],
       child: MaterialApp(
         title: '金库',

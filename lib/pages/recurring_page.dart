@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../providers/recurring_provider.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/account_provider.dart';
 import '../models/recurring_bill.dart';
 
 class RecurringPage extends StatelessWidget {
@@ -662,7 +663,8 @@ class _AddBillSheetState extends State<_AddBillSheet> {
           isExpanded: true,
           items: [
             const DropdownMenuItem(value: null, child: Text('不指定')),
-            ...accounts.map((a) => DropdownMenuItem(value: a, child: Text(a))),
+            ...Provider.of<AccountProvider>(context, listen: false).accounts
+                .map((a) => DropdownMenuItem(value: a, child: Text(a))),
           ],
           onChanged: (v) => setState(() => _account = v),
         ),
