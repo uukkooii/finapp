@@ -1,17 +1,36 @@
 workflows:
+  # ── iOS 构建 (给 iPhone) ──
   ios-build:
-    name: iOS Build
-    max_build_duration: 30
+    name: 🍎 iOS IPA 构建
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
     scripts:
-      - flutter pub get
-      - flutter build ios --release --no-codesign
+      - name: 获取依赖
+        script: flutter pub get
+      - name: 构建 iOS (无签名)
+        script: |
+          flutter build ios --release --no-codesign
     artifacts:
-      - build/ios/iphoneos/Runner.app
+      - build/ios/ipa/*.ipa
     publishing:
       email:
         recipients:
-          - your-email@example.com
+          - name: 构建完成通知
+        notify:
+          success: true
+          failure: true
+
+  # ── Android 构建 (给安卓) ──
+  android-build:
+    name: 🤖 Android APK 构建
+    environment:
+      flutter: stable
+    scripts:
+      - name: 获取依赖
+        script: flutter pub get
+      - name: 构建 APK
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
